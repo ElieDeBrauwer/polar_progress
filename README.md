@@ -36,11 +36,14 @@ optional arguments:
   -h, --help       show this help message and exit
   --config CONFIG  the configuration file (default: ./progress_settings.json)
 $ ./polar_progress.py
-Target: 1000 km
-Daily target: 2.74 km/day
-Expected distance to date: 38.4 km
-Achieved distance: 81.8 km or 8.2%
-You are 43.4 km or 15.8 days ahead of schedule
-Extrapolated result: 2132.0 km at the end of the year
+Target: 1050 km
+Daily target: 2.88 km/day
+Effective daily average: 3.37 km/day
+Expected distance to date: 230.1 km
+Achieved distance: 269.3 km or 25.7% of target
+You are 39.2 km or 13.6 days ahead of schedule
+This year:  269.3 km in  45 sessions
+Last year:   99.5 km in  14 sessions
+Extrapolated result: 1228.8 km at the end of the year
 ```
 

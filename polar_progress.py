@@ -61,9 +61,10 @@ def query_yearly_stats(session, year):
     Returns the JSON information received from
     Polar flow on success.
     """
+    now = datetime.datetime.now()
     params = {
         "from": "01-01-{}".format(year),
-        "to": "31-12-{}".format(year),
+        "to": "{:02}-{:02}-{}".format(now.day, now.month, year),
         "sport":["RUNNING"],
         "barType":"distance",
         "group":"week",
@@ -81,27 +82,39 @@ def query_yearly_stats(session, year):
     summary = resp.json()
     return summary
 
-def write_summary(target, achieved_km):
+def write_summary(target, results):
     """
     Given the target for the current year and the achieved
-    distance, it will print out a summary to standard out.
+    distances/sessions, it will print out a summary to standard out.
     """
     print("Target: {:d} km".format(target))
     daily_target = target / 365.
     print("Daily target: {:.2f} km/day".format(daily_target))
     day_of_year = datetime.datetime.now().timetuple().tm_yday
+    print("Effective daily average: {:.2f} km/day".format(
+        results["achieved_distance_km"] / day_of_year))
     current_target_km = daily_target * day_of_year
     print("Expected distance to date: {:.1f} km".format(current_target_km))
-    print("Achieved distance: {:.1f} km or {:.1f}%".format(achieved_km,
-                                                           100.0 * achieved_km / target))
-    if achieved_km > current_target_km:
+    print("Achieved distance: {:.1f} km or {:.1f}% of target".format(
+        results["achieved_distance_km"],
+        100.0 * results["achieved_distance_km"] / target))
+    if results["achieved_distance_km"] > current_target_km:
         print("You are {:.1f} km or {:.1f} days ahead of schedule".format(
-            achieved_km - current_target_km,
-            (achieved_km - current_target_km) / daily_target))
+            results["achieved_distance_km"] - current_target_km,
+            (results["achieved_distance_km"] - current_target_km) / daily_target))
     else:
-        print("You are {:.1f} km behind schedule".format(current_target_km - achieved_km))
+        print("You are {:.1f} km behind schedule".format(
+            current_target_km - results["achieved_distance_km"]))
+    print("This year: {:6.1f} km in {:3} sessions".format(
+        results["achieved_distance_km"],
+        results["num_sessions"]
+        ))
+    print("Last year: {:6.1f} km in {:3} sessions".format(
+        results["prev_achieved_distance_km"],
+        results["prev_num_sessions"]
+        ))
     print("Extrapolated result: {:.1f} km at the end of the year".format(
-        365. * achieved_km / day_of_year))
+        365. * results["achieved_distance_km"] / day_of_year))
 
 
 def main():
@@ -119,9 +132,19 @@ def main():
 
     session = login(settings["login"], settings["password"])
     year_stats = query_yearly_stats(session, datetime.datetime.now().year)
-    achieved_distance_km = \
-        year_stats["progressContainer"]["trainingReportSummary"]["totalDistance"] / 1000.
-    write_summary(settings["goal"], achieved_distance_km)
+    prev_year_stats = query_yearly_stats(session, datetime.datetime.now().year - 1)
+
+    res = {
+        "achieved_distance_km" :
+        year_stats["progressContainer"]["trainingReportSummary"]["totalDistance"] / 1000.,
+        "num_sessions" :
+        year_stats["progressContainer"]["trainingReportSummary"]["totalTrainingSessionCount"],
+        "prev_achieved_distance_km" :
+        prev_year_stats["progressContainer"]["trainingReportSummary"]["totalDistance"] / 1000.,
+        "prev_num_sessions":
+        prev_year_stats["progressContainer"]["trainingReportSummary"]["totalTrainingSessionCount"]
+    }
+    write_summary(settings["goal"], res)
 
 
 if __name__ == "__main__":
