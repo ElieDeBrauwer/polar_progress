@@ -17,12 +17,22 @@ Requires a setting file with the following contents:
 import argparse
 import datetime
 import json
+import re
 import requests
 
 FLOW_URL = 'https://flow.polar.com'
-FLOW_LOGIN_URL = "{}/ajaxLogin".format(FLOW_URL)
 FLOW_LOGIN_POST_URL = "{}/login".format(FLOW_URL)
+FLOW_LOGIN_GET_URL = FLOW_LOGIN_POST_URL
 FLOW_GETREPORT_URL = "{}/progress/getReportAsJson".format(FLOW_URL)
+
+def obtain_csrf(session):
+    """
+    Obtain the CSRF token from the login page.
+    """
+    resp = session.get(FLOW_LOGIN_GET_URL)
+    contents = str(resp.content)
+    match = re.search(r'csrfToken" value="([a-z0-9\-]+)"', contents)
+    return match.group(1)
 
 def login(username, password):
     """
@@ -30,13 +40,14 @@ def login(username, password):
     a requests session to be used for further calls.
     """
     session = requests.session()
+    csrf = obtain_csrf(session)
     postdata = {
+        'csrfToken': csrf,
         'email': username,
         'password': password,
         'returnURL': '/'
     }
 
-    session.get(FLOW_LOGIN_URL)
     resp = session.post(FLOW_LOGIN_POST_URL, data=postdata)
     if resp.status_code != 200:
         resp.raise_for_status()
@@ -61,7 +72,12 @@ def query_yearly_stats(session, year):
         "timeFrame":"year"
     }
 
-    resp = session.post(FLOW_GETREPORT_URL, json=params)
+    headers = {
+        "x-requested-with": "XMLHttpRequest",
+    }
+
+    resp = session.post(FLOW_GETREPORT_URL, json=params, headers=headers)
+
     summary = resp.json()
     return summary
 
